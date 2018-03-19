@@ -6,6 +6,7 @@ import HeightList from 'list';
 let container = (
     <HeightList/>
 );
+
 ReactDom.render(
     container,
     document.getElementById('root')

@@ -1,4 +1,5 @@
 const path = require('path');
+const proxy = require('http-proxy-middleware')
 
 var AssetsPlugin = require('assets-webpack-plugin');
 var assetsPluginInstance = new AssetsPlugin();
@@ -54,6 +55,13 @@ module.exports = {
         hot: true,
         host: "0.0.0.0",
         port: 12121,
-        disableHostCheck: true
+        disableHostCheck: true,
+        proxy: {
+            '/api/*':{
+                target:"http://xyybendi.corp.elong.com:3000",
+                secure:false,
+                changeOrigin: true
+            }
+        }
     }
 }

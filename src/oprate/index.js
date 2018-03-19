@@ -1,5 +1,6 @@
 import { Icon, Button } from 'antd';
 import React from 'react';
+import PropTypes from 'prop-types';
 require("./operate.less");
 
 let defaultProps = {
@@ -41,7 +42,7 @@ class Operate extends React.Component {
                     <Icon type="minus-square-o"/>
                 </a>
                     <label>
-                        {this.state.number}
+                        {+this.state.number}
                     </label>
                 <a>
                     <Icon type="plus-square-o"  onClick={this.plus.bind(this)}/>
@@ -50,6 +51,7 @@ class Operate extends React.Component {
         );
     }
 }
+
 
 Operate.defaultProps = defaultProps;
 

@@ -1,20 +1,25 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-
+const _ = require('lodash');
 const app = express();
 
 let connection = require('express-myconnection'),
     mysql = require('mysql');
 
-app.use(connection(mysql, {
+let connection1 = connection(mysql, {
     host: '127.0.0.1',
     port: 3306,
     user: 'work',
     password: 'workwork',
     database: 'xyy',
     debug: false
-}));
+});
+
+const ApprovalFields = ["run", "swim", "dance", "water", "getup", "fruit", "happy"];
+const CriticFields = ["candy", "cake", "icecream", "cookie", "sleep", "sad"];
+
+app.use(connection1);
 
 app.use(bodyParser.urlencoded({ extended: true })); //support x-www-form-urlencoded
 app.use(bodyParser.json());
@@ -26,14 +31,14 @@ router.use(function (req, res, next) {
     next();
 });
 
-let curl1 = router.route('/qs');
+let curl = router.route('/faires');
 
-curl1.get(function (req, res, next) {
+curl.get(function (req, res, next) {
     req.getConnection(function (err, conn) {
         if(err) {
             return next("select Cannot Connect");
         }
-        let query = conn.query("select * from questions", function (err, rows) {
+        conn.query("select * from faries", function (err, rows) {
             if(err) {
                 console.log(err);
                 return next("Mysql error, check your query");
@@ -48,38 +53,115 @@ curl1.get(function (req, res, next) {
     })
 });
 
-curl1.post(function (req, res, next) {
+curl.post(function (req, res, next) {
     req.getConnection(function (err, conn) {
         if(err) {
             return next("add Cannot Connect");
         }
 
-        req.assert('description', '描述不能为空').notEmpty();
-        req.assert('user', '用户不能为空').notEmpty();
-        req.assert('type', '问题类型不能为空').notEmpty();
         let params = req.body;
-        params['isHandled'] = 0;
 
-        conn.query("INSERT INTO questions set ? ", req.body, function (err, rows) {
-            if(err){
+        let user = params['name'];
+
+        conn.query("select * from faries where ?", {name: user}, function (err, rows) {
+            if(err) {
+                console.log(err);
+            }
+            let fairy = JSON.parse(JSON.stringify(rows[0]));
+            if(fairy) {
                 res.send({
                     code : 400,
-                    msg: '',
-                    data: err
+                    msg: `${user} is exist`,
+                    data: null
                 });
-                return next("Mysql error, check your insert");
+                return next(`${user} is exist`);
             }
-            res.send({
-                code : 207,
-                msg: '',
-                data: rows
-            });
 
+            conn.query("INSERT INTO faries set ? ", params, function (err, rows) {
+                if(err){
+                    res.send({
+                        code : 400,
+                        msg: '',
+                        data: err
+                    });
+                    return next("Mysql error, check your insert");
+                }
+                res.send({
+                    code : 200,
+                    msg: '',
+                    data: rows
+                });
+
+            });
         });
     })
 });
 
-app.use('/api', router);
+curl.put(function (req, res, next) {
+    req.getConnection(function (err, conn) {
+        if(err) {
+            return next("update Cannot Connect");
+        }
+
+        let params = req.body;
+        let user = params['name'];
+        conn.query("select * from faries where ?", {name: user}, function (err, rows) {
+            if(err) {
+                console.log(err);
+            }
+            let fairy = JSON.parse(JSON.stringify(rows[0]));
+            if(!fairy) {
+                res.send({
+                    code : 400,
+                    msg: `${user} is not exist`,
+                    data: null
+                });
+                return next(`${user} is not exist`);
+            }
+
+            let weightPre = fairy.weight;
+            let field = params['field'];
+            let preVal = fairy[field];
+            fairy[field] = params['value'];
+
+            if(_.includes(ApprovalFields, field)) {
+                fairy['weight'] = parseInt(weightPre) + parseInt(preVal) - parseInt(params['value']);
+            }else if(_.includes(CriticFields, field)) {
+                fairy['weight'] = parseInt(weightPre) + parseInt(params['value']) - parseInt(preVal);
+            }else{
+                res.send({
+                    code : 200,
+                    msg: '',
+                    data: fairy
+                });
+                return;
+            }
+
+            let id = fairy.id;
+            delete fairy.id;
+
+            conn.query("update faries set ? where id= ? ", [fairy, id], function (err, rows) {
+                if(err){
+                    res.send({
+                        code : 400,
+                        msg: '',
+                        data: err
+                    });
+                    return next("Mysql error, check your update");
+                }
+                res.send({
+                    code : 200,
+                    msg: '',
+                    data: fairy
+                });
+            });
+        });
+
+    });
+});
+
+
+app.use('/faires/api', router);
 
 let server = app.listen('3000', function () {
     console.log("Listening to port %s",server.address().port);
